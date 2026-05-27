@@ -72,14 +72,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "FIND CV Formatador" },
+      { name: "description", content: "CV Stylist formats candidate CVs for headhunting firms, integrating interview notes into a professional document." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "FIND CV Formatador" },
+      { property: "og:description", content: "CV Stylist formats candidate CVs for headhunting firms, integrating interview notes into a professional document." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "FIND CV Formatador" },
+      { name: "twitter:description", content: "CV Stylist formats candidate CVs for headhunting firms, integrating interview notes into a professional document." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2a2f4750-aa74-4708-af69-b2479d434e22/id-preview-e73a6bb9--cfe82122-12ce-482e-93c2-e54be6b01f4d.lovable.app-1779888708421.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2a2f4750-aa74-4708-af69-b2479d434e22/id-preview-e73a6bb9--cfe82122-12ce-482e-93c2-e54be6b01f4d.lovable.app-1779888708421.png" },
     ],
     links: [
       {
