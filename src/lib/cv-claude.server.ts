@@ -82,10 +82,30 @@ Devolva APENAS o JSON no schema especificado, no idioma ${LANGUAGE_NAMES[languag
     raw = raw.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "");
   }
 
+  // Extract the JSON object boundaries (in case the model added prose around it).
+  const start = raw.search(/[{[]/);
+  const openChar = start >= 0 ? raw[start] : "";
+  const closeChar = openChar === "[" ? "]" : "}";
+  const end = raw.lastIndexOf(closeChar);
+  if (start >= 0 && end > start) raw = raw.slice(start, end + 1);
+
+  const tryParse = (s: string) => JSON.parse(s) as CVData;
+
   try {
-    return JSON.parse(raw) as CVData;
+    return tryParse(raw);
   } catch {
-    console.error("Failed to parse AI JSON:", raw.slice(0, 500));
-    throw new Error("AI retornou JSON inválido");
+    // Repair common issues: trailing commas + stray control chars.
+    const repaired = raw
+      .replace(/,\s*}/g, "}")
+      .replace(/,\s*]/g, "]")
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+    try {
+      return tryParse(repaired);
+    } catch (e) {
+      console.error("Failed to parse AI JSON:", raw.slice(0, 1000));
+      throw new Error(
+        `AI retornou JSON inválido: ${(e as Error).message.slice(0, 120)}`,
+      );
+    }
   }
 }
