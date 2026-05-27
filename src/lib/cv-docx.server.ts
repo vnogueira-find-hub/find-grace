@@ -139,23 +139,23 @@ function buildBody(cv: CVData, language: CVLanguage): string {
       const headerText =
         exp.period ? `${exp.company} (${exp.period})` : exp.company;
       parts.push(
-        `<w:p><w:pPr><w:jc w:val="both"/><w:rPr>${RPR_COMPANY}</w:rPr></w:pPr>${run(RPR_COMPANY, headerText)}</w:p>`,
+        `<w:p><w:pPr>${SPACING_TIGHT}<w:jc w:val="both"/><w:rPr>${RPR_COMPANY}</w:rPr></w:pPr>${run(RPR_COMPANY, headerText)}</w:p>`,
       );
 
       for (const role of exp.roles ?? []) {
         const titleText =
           role.period ? `${role.title} (${role.period})` : role.title;
         parts.push(
-          bodyPara(run(RPR_BODY_BOLD, `${L.role}: `), run(RPR_BODY_BOLD, titleText)),
+          bodyParaTight(run(RPR_BODY_BOLD, `${L.role}: `), run(RPR_BODY_BOLD, titleText)),
         );
         if (role.responsibilities?.length) {
-          parts.push(bodyPara(run(RPR_BODY_BOLD, `${L.responsibilities}:`)));
+          parts.push(bodyParaTight(run(RPR_BODY_BOLD, `${L.responsibilities}:`)));
           for (const r of withTrailingPunct(role.responsibilities)) {
             parts.push(bullet(run(RPR_BODY, r)));
           }
         }
+        parts.push(emptyPara());
       }
-      parts.push(emptyPara());
     }
   }
 
