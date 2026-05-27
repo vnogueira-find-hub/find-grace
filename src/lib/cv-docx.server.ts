@@ -32,32 +32,38 @@ const run = (rPr: string, text: string): string => {
 const sectionHeading = (title: string): string =>
   `<w:p><w:pPr><w:jc w:val="both"/><w:rPr>${RPR_SECTION_TITLE}</w:rPr></w:pPr>${run(RPR_SECTION_TITLE, title)}</w:p>`;
 
-// Tight spacing — kills the default 8pt "after" from Normal so blocks read compactly.
+// Breathing room between paragraphs/bullets (6pt after).
+const SPACING_LOOSE = `<w:spacing w:after="120" w:line="276" w:lineRule="auto"/>`;
+// No after-spacing — for tight groupings (e.g., role title above its bullets).
 const SPACING_TIGHT = `<w:spacing w:after="0" w:line="276" w:lineRule="auto"/>`;
 
-// Body paragraph: justified, 11pt, tight.
+// Body paragraph: justified, 11pt, breathing room after.
 const bodyPara = (...runs: string[]): string =>
+  `<w:p><w:pPr>${SPACING_LOOSE}<w:jc w:val="both"/><w:rPr>${RPR_BODY}</w:rPr></w:pPr>${runs.join("")}</w:p>`;
+
+// Same as bodyPara but tight (no after-spacing) — for headers that lead into bullets.
+const bodyParaTight = (...runs: string[]): string =>
   `<w:p><w:pPr>${SPACING_TIGHT}<w:jc w:val="both"/><w:rPr>${RPR_BODY}</w:rPr></w:pPr>${runs.join("")}</w:p>`;
 
 // Bullet item — uses numId=1 from the template's numbering.xml (•).
 const bullet = (...runs: string[]): string =>
-  `<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>${SPACING_TIGHT}<w:ind w:left="360"/><w:jc w:val="both"/><w:rPr>${RPR_BODY}</w:rPr></w:pPr>${runs.join("")}</w:p>`;
+  `<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>${SPACING_LOOSE}<w:ind w:left="360"/><w:jc w:val="both"/><w:rPr>${RPR_BODY}</w:rPr></w:pPr>${runs.join("")}</w:p>`;
 
 const emptyPara = (): string =>
   `<w:p><w:pPr>${SPACING_TIGHT}<w:rPr>${RPR_BODY}</w:rPr></w:pPr></w:p>`;
 
-// Compensation table — 2 cols (label | value), no visible borders, full width.
+// Compensation table — 2 cols (label | value), single-line borders, full width.
 function compTable(rows: Array<[string, string]>): string {
-  const noBorder = `<w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders>`;
+  const border = `<w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:tcBorders>`;
   const cellPara = (rPr: string, text: string): string =>
     `<w:p><w:pPr>${SPACING_TIGHT}<w:rPr>${rPr}</w:rPr></w:pPr><w:r><w:rPr>${rPr}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;
   const row = (label: string, value: string): string =>
-    `<w:tr><w:tc><w:tcPr><w:tcW w:w="4500" w:type="dxa"/>${noBorder}</w:tcPr>${cellPara(RPR_BODY_BOLD, label)}</w:tc>` +
-    `<w:tc><w:tcPr><w:tcW w:w="5077" w:type="dxa"/>${noBorder}</w:tcPr>${cellPara(RPR_BODY, value)}</w:tc></w:tr>`;
+    `<w:tr><w:tc><w:tcPr><w:tcW w:w="4500" w:type="dxa"/>${border}</w:tcPr>${cellPara(RPR_BODY_BOLD, label)}</w:tc>` +
+    `<w:tc><w:tcPr><w:tcW w:w="5077" w:type="dxa"/>${border}</w:tcPr>${cellPara(RPR_BODY, value)}</w:tc></w:tr>`;
   return (
     `<w:tbl>` +
     `<w:tblPr><w:tblW w:w="9577" w:type="dxa"/>` +
-    `<w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>` +
+    `<w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:tblBorders>` +
     `<w:tblLook w:val="04A0"/></w:tblPr>` +
     `<w:tblGrid><w:gridCol w:w="4500"/><w:gridCol w:w="5077"/></w:tblGrid>` +
     rows.map(([l, v]) => row(l, v)).join("") +
