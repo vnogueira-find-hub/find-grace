@@ -187,7 +187,10 @@ function buildBody(cv: CVData, language: CVLanguage): string {
   ].filter(([, v]) => v && v.trim()) as Array<[string, string]>;
 
   if (compEntries.length || cv.salaryExpectation?.trim()) {
-    parts.push(sectionHeading(L.compensation));
+    // Heading uses keepNext so it stays glued to the table below.
+    parts.push(
+      `<w:p><w:pPr><w:keepNext/><w:keepLines/><w:jc w:val="both"/><w:rPr>${RPR_SECTION_TITLE}</w:rPr></w:pPr>${run(RPR_SECTION_TITLE, L.compensation)}</w:p>`,
+    );
     const rows = [...compEntries];
     if (cv.salaryExpectation?.trim()) {
       rows.push([L.salaryExpectation, cv.salaryExpectation.trim()]);
