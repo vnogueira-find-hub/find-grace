@@ -32,16 +32,38 @@ const run = (rPr: string, text: string): string => {
 const sectionHeading = (title: string): string =>
   `<w:p><w:pPr><w:jc w:val="both"/><w:rPr>${RPR_SECTION_TITLE}</w:rPr></w:pPr>${run(RPR_SECTION_TITLE, title)}</w:p>`;
 
-// Body paragraph: justified, 11pt.
+// Tight spacing — kills the default 8pt "after" from Normal so blocks read compactly.
+const SPACING_TIGHT = `<w:spacing w:after="0" w:line="276" w:lineRule="auto"/>`;
+
+// Body paragraph: justified, 11pt, tight.
 const bodyPara = (...runs: string[]): string =>
-  `<w:p><w:pPr><w:jc w:val="both"/><w:rPr>${RPR_BODY}</w:rPr></w:pPr>${runs.join("")}</w:p>`;
+  `<w:p><w:pPr>${SPACING_TIGHT}<w:jc w:val="both"/><w:rPr>${RPR_BODY}</w:rPr></w:pPr>${runs.join("")}</w:p>`;
 
 // Bullet item — uses numId=1 from the template's numbering.xml (•).
 const bullet = (...runs: string[]): string =>
-  `<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:ind w:left="360"/><w:jc w:val="both"/><w:rPr>${RPR_BODY}</w:rPr></w:pPr>${runs.join("")}</w:p>`;
+  `<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>${SPACING_TIGHT}<w:ind w:left="360"/><w:jc w:val="both"/><w:rPr>${RPR_BODY}</w:rPr></w:pPr>${runs.join("")}</w:p>`;
 
 const emptyPara = (): string =>
-  `<w:p><w:pPr><w:rPr>${RPR_BODY}</w:rPr></w:pPr></w:p>`;
+  `<w:p><w:pPr>${SPACING_TIGHT}<w:rPr>${RPR_BODY}</w:rPr></w:pPr></w:p>`;
+
+// Compensation table — 2 cols (label | value), no visible borders, full width.
+function compTable(rows: Array<[string, string]>): string {
+  const noBorder = `<w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders>`;
+  const cellPara = (rPr: string, text: string): string =>
+    `<w:p><w:pPr>${SPACING_TIGHT}<w:rPr>${rPr}</w:rPr></w:pPr><w:r><w:rPr>${rPr}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;
+  const row = (label: string, value: string): string =>
+    `<w:tr><w:tc><w:tcPr><w:tcW w:w="4500" w:type="dxa"/>${noBorder}</w:tcPr>${cellPara(RPR_BODY_BOLD, label)}</w:tc>` +
+    `<w:tc><w:tcPr><w:tcW w:w="5077" w:type="dxa"/>${noBorder}</w:tcPr>${cellPara(RPR_BODY, value)}</w:tc></w:tr>`;
+  return (
+    `<w:tbl>` +
+    `<w:tblPr><w:tblW w:w="9577" w:type="dxa"/>` +
+    `<w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>` +
+    `<w:tblLook w:val="04A0"/></w:tblPr>` +
+    `<w:tblGrid><w:gridCol w:w="4500"/><w:gridCol w:w="5077"/></w:tblGrid>` +
+    rows.map(([l, v]) => row(l, v)).join("") +
+    `</w:tbl>`
+  );
+}
 
 // Centered header table (name + contact) — mirrors the template structure.
 function headerTable(cv: CVData, L: typeof LABELS["pt"]): string {
