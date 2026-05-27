@@ -16,6 +16,7 @@ REGRAS:
 - Para datas use o formato curto local do idioma (ex.: "Nov 2025 – Atual" em PT, "Nov 2025 – Present" em EN, "Nov 2025 – Actual" em ES).
 - Cargos dentro da mesma empresa devem ficar agrupados em "roles" (em ordem cronológica reversa: mais recente primeiro).
 - Bullets de responsabilidades: frases curtas, começando com verbo no infinitivo ou gerúndio conforme idioma.
+- TRADUZA TUDO para o idioma de saída, inclusive títulos acadêmicos e cargos que estejam em outro idioma no CV bruto (ex.: "Licenciado" → "Bachelor's degree" em EN / "Licenciatura" em ES; "Engenheiro" → "Engineer"; "Mestre" → "Master's degree"). Nunca deixe palavras soltas no idioma original. Mantenha apenas nomes próprios (pessoas, empresas, instituições, cidades) inalterados.
 - Se uma informação não existir no CV nem nas notas, use string vazia "".
 - Na Análise de Entrevista, redija parágrafos coesos (não listas). Se as notas estiverem vazias, redija análise preliminar baseada apenas no CV.
 - Pacote de remuneração: preencha somente o que estiver explícito; caso contrário "".
