@@ -32,10 +32,10 @@ const run = (rPr: string, text: string): string => {
 const sectionHeading = (title: string): string =>
   `<w:p><w:pPr><w:jc w:val="both"/><w:rPr>${RPR_SECTION_TITLE}</w:rPr></w:pPr>${run(RPR_SECTION_TITLE, title)}</w:p>`;
 
-// Breathing room between paragraphs/bullets (6pt after).
-const SPACING_LOOSE = `<w:spacing w:after="120" w:line="276" w:lineRule="auto"/>`;
+// Breathing room between paragraphs/bullets (6pt after). Line spacing single (1.0).
+const SPACING_LOOSE = `<w:spacing w:after="120" w:line="240" w:lineRule="auto"/>`;
 // No after-spacing — for tight groupings (e.g., role title above its bullets).
-const SPACING_TIGHT = `<w:spacing w:after="0" w:line="276" w:lineRule="auto"/>`;
+const SPACING_TIGHT = `<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>`;
 
 // Body paragraph: justified, 11pt, breathing room after.
 const bodyPara = (...runs: string[]): string =>
