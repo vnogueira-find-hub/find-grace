@@ -55,10 +55,13 @@ const emptyPara = (): string =>
 // Compensation table — 2 cols (label | value), single-line borders, full width.
 function compTable(rows: Array<[string, string]>): string {
   const border = `<w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:tcBorders>`;
+  // keepNext/keepLines on every paragraph forces Word to keep the whole table
+  // on a single page — if it doesn't fit, the entire table moves to the next.
   const cellPara = (rPr: string, text: string): string =>
-    `<w:p><w:pPr>${SPACING_TIGHT}<w:rPr>${rPr}</w:rPr></w:pPr><w:r><w:rPr>${rPr}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;
+    `<w:p><w:pPr>${SPACING_TIGHT}<w:keepNext/><w:keepLines/><w:rPr>${rPr}</w:rPr></w:pPr><w:r><w:rPr>${rPr}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;
   const row = (label: string, value: string): string =>
-    `<w:tr><w:tc><w:tcPr><w:tcW w:w="4500" w:type="dxa"/>${border}</w:tcPr>${cellPara(RPR_BODY_BOLD, label)}</w:tc>` +
+    `<w:tr><w:trPr><w:cantSplit/></w:trPr>` +
+    `<w:tc><w:tcPr><w:tcW w:w="4500" w:type="dxa"/>${border}</w:tcPr>${cellPara(RPR_BODY_BOLD, label)}</w:tc>` +
     `<w:tc><w:tcPr><w:tcW w:w="5077" w:type="dxa"/>${border}</w:tcPr>${cellPara(RPR_BODY, value)}</w:tc></w:tr>`;
   return (
     `<w:tbl>` +
@@ -184,7 +187,10 @@ function buildBody(cv: CVData, language: CVLanguage): string {
   ].filter(([, v]) => v && v.trim()) as Array<[string, string]>;
 
   if (compEntries.length || cv.salaryExpectation?.trim()) {
-    parts.push(sectionHeading(L.compensation));
+    // Heading uses keepNext so it stays glued to the table below.
+    parts.push(
+      `<w:p><w:pPr><w:keepNext/><w:keepLines/><w:jc w:val="both"/><w:rPr>${RPR_SECTION_TITLE}</w:rPr></w:pPr>${run(RPR_SECTION_TITLE, L.compensation)}</w:p>`,
+    );
     const rows = [...compEntries];
     if (cv.salaryExpectation?.trim()) {
       rows.push([L.salaryExpectation, cv.salaryExpectation.trim()]);
