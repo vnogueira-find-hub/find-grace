@@ -13,12 +13,14 @@ Sua tarefa: extrair informações estruturadas de um CV bruto + notas de entrevi
 REGRAS:
 - Devolva APENAS JSON válido — sem markdown, sem comentários, sem texto extra.
 - Todo o conteúdo (títulos, descrições, análise) deve estar no idioma solicitado pelo usuário.
+- EDUCAÇÃO: para cada item, mostre apenas o ANO DE CONCLUSÃO (não inclua o ano inicial). Use sempre ":" depois do tipo de formação seguido do nome do curso. Exemplos: "MBA: Marketing Digital – FGV (2020)", "Bacharelado: Administração de Empresas – USP (2015)", "Mestrado: Engenharia – Unicamp (2018)". Para cursos em andamento, use o idioma de saída ("em andamento"/"in progress"/"en curso").
+- TRADUZA TUDO para o idioma de saída, inclusive títulos acadêmicos e cargos que estejam em outro idioma no CV bruto (ex.: "Licenciado" → "Bachelor's degree" em EN / "Licenciatura" em ES; "Engenheiro" → "Engineer"; "Mestre" → "Master's degree"). Nunca deixe palavras soltas no idioma original. Mantenha apenas nomes próprios (pessoas, empresas, instituições, cidades) inalterados.
 - Para datas use o formato curto local do idioma (ex.: "Nov 2025 – Atual" em PT, "Nov 2025 – Present" em EN, "Nov 2025 – Actual" em ES).
 - Cargos dentro da mesma empresa devem ficar agrupados em "roles" (em ordem cronológica reversa: mais recente primeiro).
 - Bullets de responsabilidades: frases curtas, começando com verbo no infinitivo ou gerúndio conforme idioma.
-- TRADUZA TUDO para o idioma de saída, inclusive títulos acadêmicos e cargos que estejam em outro idioma no CV bruto (ex.: "Licenciado" → "Bachelor's degree" em EN / "Licenciatura" em ES; "Engenheiro" → "Engineer"; "Mestre" → "Master's degree"). Nunca deixe palavras soltas no idioma original. Mantenha apenas nomes próprios (pessoas, empresas, instituições, cidades) inalterados.
+- QUALIFICAÇÕES: deve ser APENAS um resumo curto do tipo "sobre o candidato" — 2 a 4 bullets no máximo, sintetizando perfil profissional, principais competências e diferenciais. NÃO listar certificações, cursos ou ferramentas técnicas aqui.
 - Se uma informação não existir no CV nem nas notas, use string vazia "".
-- Na Análise de Entrevista, redija parágrafos coesos (não listas). Se as notas estiverem vazias, redija análise preliminar baseada apenas no CV.
+- Na Análise de Entrevista, redija parágrafos CONCISOS — no MÁXIMO 4 a 5 linhas por bloco. Tom executivo, direto, sem repetições. Se as notas estiverem vazias, redija análise preliminar baseada apenas no CV.
 - Pacote de remuneração: preencha somente o que estiver explícito; caso contrário "".
 - Não invente fatos. Tom executivo, profissional e direto.
 

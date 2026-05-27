@@ -32,10 +32,10 @@ const run = (rPr: string, text: string): string => {
 const sectionHeading = (title: string): string =>
   `<w:p><w:pPr><w:jc w:val="both"/><w:rPr>${RPR_SECTION_TITLE}</w:rPr></w:pPr>${run(RPR_SECTION_TITLE, title)}</w:p>`;
 
-// Breathing room between paragraphs/bullets (6pt after).
-const SPACING_LOOSE = `<w:spacing w:after="120" w:line="276" w:lineRule="auto"/>`;
+// Breathing room between paragraphs/bullets (6pt after). Line spacing single (1.0).
+const SPACING_LOOSE = `<w:spacing w:after="120" w:line="240" w:lineRule="auto"/>`;
 // No after-spacing — for tight groupings (e.g., role title above its bullets).
-const SPACING_TIGHT = `<w:spacing w:after="0" w:line="276" w:lineRule="auto"/>`;
+const SPACING_TIGHT = `<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>`;
 
 // Body paragraph: justified, 11pt, breathing room after.
 const bodyPara = (...runs: string[]): string =>
@@ -141,17 +141,20 @@ function buildBody(cv: CVData, language: CVLanguage): string {
     for (const exp of cv.experience) {
       const headerText =
         exp.period ? `${exp.company} (${exp.period})` : exp.company;
+      // Company header — LOOSE spacing so the role below has an "enter" gap.
       parts.push(
-        `<w:p><w:pPr>${SPACING_TIGHT}<w:jc w:val="both"/><w:rPr>${RPR_COMPANY}</w:rPr></w:pPr>${run(RPR_COMPANY, headerText)}</w:p>`,
+        `<w:p><w:pPr>${SPACING_LOOSE}<w:jc w:val="both"/><w:rPr>${RPR_COMPANY}</w:rPr></w:pPr>${run(RPR_COMPANY, headerText)}</w:p>`,
       );
 
       for (const role of exp.roles ?? []) {
         const titleText =
           role.period ? `${role.title} (${role.period})` : role.title;
+        // Role title — LOOSE so there's an "enter" before "Principais responsabilidades".
         parts.push(
-          bodyParaTight(run(RPR_BODY_BOLD, `${L.role}: `), run(RPR_BODY_BOLD, titleText)),
+          bodyPara(run(RPR_BODY_BOLD, `${L.role}: `), run(RPR_BODY_BOLD, titleText)),
         );
         if (role.responsibilities?.length) {
+          // Responsibilities label — TIGHT so it sticks to the bullets below.
           parts.push(bodyParaTight(run(RPR_BODY_BOLD, `${L.responsibilities}:`)));
           for (const r of withTrailingPunct(role.responsibilities)) {
             parts.push(bullet(run(RPR_BODY, r)));
@@ -171,33 +174,35 @@ function buildBody(cv: CVData, language: CVLanguage): string {
     parts.push(emptyPara());
   }
 
-  // Compensation package
+  // Compensation package — ALWAYS render the full table (blank values stay empty).
   const comp = cv.compensationPackage ?? ({} as CVData["compensationPackage"]);
-  const compEntries: Array<[string, string]> = [
-    [L.monthlySalary, comp.monthlySalary],
-    [L.annualBonus, comp.annualBonus],
-    [L.privatePension, comp.privatePension],
-    [L.stockOptions, comp.stockOptions],
-    [L.healthInsurance, comp.healthInsurance],
-    [L.dentalInsurance, comp.dentalInsurance],
-    [L.mealVoucher, comp.mealVoucher],
-    [L.foodVoucher, comp.foodVoucher],
-    [L.transportVoucher, comp.transportVoucher],
-    [L.other, comp.other],
-  ].filter(([, v]) => v && v.trim()) as Array<[string, string]>;
+  const compRows: Array<[string, string]> = [
+    [L.monthlySalary, comp.monthlySalary ?? ""],
+    [L.annualBonus, comp.annualBonus ?? ""],
+    [L.privatePension, comp.privatePension ?? ""],
+    [L.stockOptions, comp.stockOptions ?? ""],
+    [L.healthInsurance, comp.healthInsurance ?? ""],
+    [L.dentalInsurance, comp.dentalInsurance ?? ""],
+    [L.mealVoucher, comp.mealVoucher ?? ""],
+    [L.foodVoucher, comp.foodVoucher ?? ""],
+    [L.transportVoucher, comp.transportVoucher ?? ""],
+    [L.other, comp.other ?? ""],
+  ];
 
-  if (compEntries.length || cv.salaryExpectation?.trim()) {
-    // Heading uses keepNext so it stays glued to the table below.
-    parts.push(
-      `<w:p><w:pPr><w:keepNext/><w:keepLines/><w:jc w:val="both"/><w:rPr>${RPR_SECTION_TITLE}</w:rPr></w:pPr>${run(RPR_SECTION_TITLE, L.compensation)}</w:p>`,
-    );
-    const rows = [...compEntries];
-    if (cv.salaryExpectation?.trim()) {
-      rows.push([L.salaryExpectation, cv.salaryExpectation.trim()]);
-    }
-    parts.push(compTable(rows));
-    parts.push(emptyPara());
-  }
+  // Heading uses keepNext so it stays glued to the table below.
+  parts.push(
+    `<w:p><w:pPr><w:keepNext/><w:keepLines/><w:jc w:val="both"/><w:rPr>${RPR_SECTION_TITLE}</w:rPr></w:pPr>${run(RPR_SECTION_TITLE, L.compensation)}</w:p>`,
+  );
+  parts.push(compTable(compRows));
+  // Empty paragraph after the table to create breathing room before salary expectation.
+  parts.push(emptyPara());
+  parts.push(
+    bodyPara(
+      run(RPR_BODY_BOLD, `${L.salaryExpectation}: `),
+      run(RPR_BODY, cv.salaryExpectation?.trim() || ""),
+    ),
+  );
+  parts.push(emptyPara());
 
   // Interview Analysis
   const a = cv.interviewAnalysis ?? ({} as CVData["interviewAnalysis"]);
