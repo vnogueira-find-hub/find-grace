@@ -208,10 +208,7 @@ function buildBody(cv: CVData, language: CVLanguage): string {
 let cachedTemplate: ArrayBuffer | null = null;
 async function loadTemplate(): Promise<ArrayBuffer> {
   if (cachedTemplate) return cachedTemplate;
-  // In the Worker SSR runtime, asset URLs are absolute and fetchable.
-  const res = await fetch(templateUrl);
-  if (!res.ok) throw new Error(`Failed to load FIND template: ${res.status}`);
-  cachedTemplate = await res.arrayBuffer();
+  cachedTemplate = Buffer.from(FIND_TEMPLATE_B64, "base64").buffer.slice(0) as ArrayBuffer;
   return cachedTemplate;
 }
 
