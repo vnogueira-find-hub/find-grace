@@ -1,394 +1,251 @@
-import {
-  AlignmentType,
-  BorderStyle,
-  Document,
-  Footer,
-  Header,
-  HeadingLevel,
-  ImageRun,
-  LevelFormat,
-  Packer,
-  PageOrientation,
-  Paragraph,
-  ShadingType,
-  Table,
-  TableCell,
-  TableRow,
-  TextRun,
-  WidthType,
-  HorizontalPositionAlign,
-  HorizontalPositionRelativeFrom,
-  VerticalPositionAlign,
-  VerticalPositionRelativeFrom,
-} from "docx";
-import { promises as fs } from "node:fs";
-import path from "node:path";
+// Generates a FIND-formatted .docx by reusing the official FIND template
+// as a binary base and replacing ONLY the body XML. Headers, footers,
+// styles, fonts, numbering, watermark and section properties all come
+// from the template untouched — that's how we get pixel-perfect output.
+
+import JSZip from "jszip";
+import { FIND_TEMPLATE_B64 } from "./find-template.b64";
 import type { CVData, CVLanguage } from "./cv-types";
 import { LABELS } from "./cv-labels";
 
-// FIND brand colors (from reference template)
-const NAVY = "0B1F3A"; // logo dark
-const BLUE = "5A8FBF"; // logo accent / section headings
-const BLACK = "000000";
-const GREY = "555555";
+// ----------------- XML helpers -----------------
+const esc = (s: string): string =>
+  (s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 
-const FONT = "Calibri";
+const RPR_BODY = `<w:rFonts w:asciiTheme="majorHAnsi" w:hAnsiTheme="majorHAnsi" w:cstheme="majorHAnsi"/><w:sz w:val="22"/><w:szCs w:val="22"/>`;
+const RPR_BODY_BOLD = `<w:rFonts w:asciiTheme="majorHAnsi" w:hAnsiTheme="majorHAnsi" w:cstheme="majorHAnsi"/><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/>`;
+const RPR_SECTION_TITLE = `<w:rFonts w:asciiTheme="majorHAnsi" w:hAnsiTheme="majorHAnsi" w:cstheme="majorHAnsi"/><w:b/><w:u w:val="single"/>`;
+const RPR_COMPANY = `<w:rFonts w:asciiTheme="majorHAnsi" w:hAnsiTheme="majorHAnsi" w:cstheme="majorHAnsi"/><w:b/><w:sz w:val="22"/><w:szCs w:val="22"/><w:u w:val="single"/>`;
 
-let cachedLogo: Uint8Array | null = null;
-let cachedLetterhead: Uint8Array | null = null;
+// Run with optional leading/trailing whitespace preserved.
+const run = (rPr: string, text: string): string => {
+  const t = text ?? "";
+  const preserve = /^\s|\s$/.test(t) ? ' xml:space="preserve"' : "";
+  return `<w:r><w:rPr>${rPr}</w:rPr><w:t${preserve}>${esc(t)}</w:t></w:r>`;
+};
 
-async function loadAsset(filename: string): Promise<Uint8Array> {
-  // Assets are bundled at build time; in dev/server they live in src/assets.
-  const candidates = [
-    path.resolve(process.cwd(), "src/assets", filename),
-    path.resolve(process.cwd(), "../src/assets", filename),
-  ];
-  for (const p of candidates) {
-    try {
-      const buf = await fs.readFile(p);
-      return new Uint8Array(buf);
-    } catch {
-      // try next
-    }
-  }
-  throw new Error(`Asset not found: ${filename}`);
+// Section heading: bold + underline, default size (24 = 12pt from doc default).
+const sectionHeading = (title: string): string =>
+  `<w:p><w:pPr><w:jc w:val="both"/><w:rPr>${RPR_SECTION_TITLE}</w:rPr></w:pPr>${run(RPR_SECTION_TITLE, title)}</w:p>`;
+
+// Body paragraph: justified, 11pt.
+const bodyPara = (...runs: string[]): string =>
+  `<w:p><w:pPr><w:jc w:val="both"/><w:rPr>${RPR_BODY}</w:rPr></w:pPr>${runs.join("")}</w:p>`;
+
+// Bullet item — uses numId=1 from the template's numbering.xml (•).
+const bullet = (...runs: string[]): string =>
+  `<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:ind w:left="360"/><w:jc w:val="both"/><w:rPr>${RPR_BODY}</w:rPr></w:pPr>${runs.join("")}</w:p>`;
+
+const emptyPara = (): string =>
+  `<w:p><w:pPr><w:rPr>${RPR_BODY}</w:rPr></w:pPr></w:p>`;
+
+// Centered header table (name + contact) — mirrors the template structure.
+function headerTable(cv: CVData, L: typeof LABELS["pt"]): string {
+  const cell = (inner: string): string =>
+    `<w:tr><w:trPr><w:jc w:val="center"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="9577" w:type="dxa"/></w:tcPr>${inner}</w:tc></w:tr>`;
+
+  const namePara = `<w:p><w:pPr><w:rPr><w:rFonts w:asciiTheme="majorHAnsi" w:hAnsiTheme="majorHAnsi" w:cstheme="majorHAnsi"/><w:b/><w:sz w:val="26"/><w:szCs w:val="26"/><w:u w:val="single"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:asciiTheme="majorHAnsi" w:hAnsiTheme="majorHAnsi"/><w:b/><w:sz w:val="26"/><w:szCs w:val="26"/><w:u w:val="single"/></w:rPr><w:t>${esc(cv.name || "—")}</w:t></w:r></w:p>`;
+
+  const contactRow = (label: string, value: string): string => {
+    const v = value?.trim() || "—";
+    const inner = `<w:p><w:pPr><w:rPr>${RPR_BODY}</w:rPr></w:pPr>${run(RPR_BODY_BOLD, `${label}: `)}${run(RPR_BODY, v)}</w:p>`;
+    return cell(inner);
+  };
+
+  return (
+    `<w:tbl>` +
+    `<w:tblPr><w:tblW w:w="9577" w:type="dxa"/><w:jc w:val="center"/>` +
+    `<w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:tblBorders>` +
+    `<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>` +
+    `<w:tblGrid><w:gridCol w:w="9577"/></w:tblGrid>` +
+    cell(namePara) +
+    contactRow(L.phone, cv.phone) +
+    contactRow(L.email, cv.email) +
+    contactRow(L.linkedin, cv.linkedin) +
+    `</w:tbl>`
+  );
 }
 
-async function loadLogo(): Promise<Uint8Array> {
-  if (!cachedLogo) cachedLogo = await loadAsset("find-logo.png");
-  return cachedLogo;
-}
-async function loadLetterhead(): Promise<Uint8Array> {
-  if (!cachedLetterhead) cachedLetterhead = await loadAsset("find-letterhead.png");
-  return cachedLetterhead;
-}
-
-function txt(text: string, opts: { bold?: boolean; color?: string; size?: number; underline?: boolean } = {}) {
-  return new TextRun({
-    text,
-    font: FONT,
-    bold: opts.bold,
-    color: opts.color ?? BLACK,
-    size: opts.size ?? 22, // 11pt
-    underline: opts.underline ? {} : undefined,
+// Punctuation: bullets end with ";", last one with "." (matches FIND style).
+function withTrailingPunct(items: string[]): string[] {
+  const arr = items.filter((s) => s && s.trim());
+  return arr.map((s, i) => {
+    const trimmed = s.replace(/[.;,\s]+$/, "");
+    return trimmed + (i === arr.length - 1 ? "." : ";");
   });
 }
 
-function sectionHeading(text: string): Paragraph {
-  return new Paragraph({
-    spacing: { before: 280, after: 140 },
-    border: {
-      bottom: { style: BorderStyle.SINGLE, size: 8, color: BLUE, space: 4 },
-    },
-    children: [
-      new TextRun({
-        text: text.toUpperCase(),
-        font: FONT,
-        bold: true,
-        color: NAVY,
-        size: 26, // 13pt
-      }),
-    ],
-  });
-}
-
-function bullet(text: string): Paragraph {
-  return new Paragraph({
-    numbering: { reference: "find-bullets", level: 0 },
-    spacing: { after: 60 },
-    children: [txt(text)],
-  });
-}
-
-function labelValueRow(label: string, value: string): TableRow {
-  return new TableRow({
-    children: [
-      new TableCell({
-        width: { size: 5400, type: WidthType.DXA },
-        margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        children: [
-          new Paragraph({
-            children: [txt(label + ":", { bold: true })],
-          }),
-        ],
-      }),
-      new TableCell({
-        width: { size: 3960, type: WidthType.DXA },
-        margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        children: [
-          new Paragraph({
-            children: [txt(value || "—")],
-          }),
-        ],
-      }),
-    ],
-  });
-}
-
-function analysisBlock(label: string, body: string): Paragraph[] {
-  if (!body.trim()) return [];
-  return [
-    new Paragraph({
-      spacing: { before: 180, after: 80 },
-      children: [
-        new TextRun({ text: `${label}: `, font: FONT, bold: true, color: NAVY, size: 22 }),
-        new TextRun({ text: body.trim(), font: FONT, size: 22 }),
-      ],
-      alignment: AlignmentType.JUSTIFIED,
-    }),
-  ];
-}
-
-export async function buildCVDocument(data: CVData, language: CVLanguage): Promise<Uint8Array> {
+function buildBody(cv: CVData, language: CVLanguage): string {
   const L = LABELS[language];
-  const logo = await loadLogo();
-  const letterhead = await loadLetterhead();
+  const parts: string[] = [];
 
-  // Full-page background letterhead (header + watermark in one image).
-  // Page size US Letter: 12240 x 15840 DXA = 8.5" x 11" = 816 x 1056 pt = 2550 x 3300 px at 96dpi.
-  // We use docx points: 612 x 792 (pt). ImageRun transformation is in pixels at 96dpi.
-  const backgroundImage = new ImageRun({
-    type: "png",
-    data: letterhead,
-    transformation: { width: 612, height: 792 },
-    floating: {
-      horizontalPosition: {
-        relative: HorizontalPositionRelativeFrom.PAGE,
-        align: HorizontalPositionAlign.LEFT,
-      },
-      verticalPosition: {
-        relative: VerticalPositionRelativeFrom.PAGE,
-        align: VerticalPositionAlign.TOP,
-      },
-      behindDocument: true,
-    },
-  });
-
-  const header = new Header({
-    children: [
-      new Paragraph({
-        children: [backgroundImage],
-      }),
-    ],
-  });
-
-  const footer = new Footer({
-    children: [
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [
-          new TextRun({ text: "", font: FONT, size: 16, color: GREY }),
-        ],
-      }),
-    ],
-  });
-
-  const children: Paragraph[] = [];
-
-  // Spacer so content starts below the letterhead header (~1.4 inches).
-  children.push(
-    new Paragraph({ spacing: { before: 1800 }, children: [txt("")] }),
-  );
-
-  // Candidate name — centered, large, navy
-  children.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 200, after: 200 },
-      children: [
-        new TextRun({
-          text: data.name || "—",
-          font: FONT,
-          bold: true,
-          color: NAVY,
-          size: 36, // 18pt
-        }),
-      ],
-    }),
-  );
-
-  // Contact lines
-  const contactLine = (label: string, value: string) =>
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 40 },
-      children: [
-        new TextRun({ text: `${label}: `, font: FONT, bold: true, size: 22 }),
-        new TextRun({ text: value || "—", font: FONT, size: 22 }),
-      ],
-    });
-  children.push(contactLine(L.phone, data.phone));
-  children.push(contactLine(L.email, data.email));
-  children.push(contactLine(L.linkedin, data.linkedin));
+  parts.push(headerTable(cv, L));
+  parts.push(emptyPara());
 
   // Education
-  children.push(sectionHeading(L.education));
-  for (const item of data.education || []) {
-    children.push(bullet(item));
+  if (cv.education?.length) {
+    parts.push(sectionHeading(L.education));
+    for (const e of withTrailingPunct(cv.education)) {
+      parts.push(bullet(run(RPR_BODY, e)));
+    }
+    parts.push(emptyPara());
   }
 
   // Qualifications
-  children.push(sectionHeading(L.qualifications));
-  for (const item of data.qualifications || []) {
-    children.push(bullet(item));
+  if (cv.qualifications?.length) {
+    parts.push(sectionHeading(L.qualifications));
+    for (const q of withTrailingPunct(cv.qualifications)) {
+      parts.push(bullet(run(RPR_BODY, q)));
+    }
+    parts.push(emptyPara());
   }
 
   // Experience
-  children.push(sectionHeading(L.experience));
-  for (const job of data.experience || []) {
-    // Company header
-    children.push(
-      new Paragraph({
-        spacing: { before: 220, after: 80 },
-        children: [
-          new TextRun({
-            text: `${job.company}${job.period ? ` (${job.period})` : ""}`,
-            font: FONT,
-            bold: true,
-            color: NAVY,
-            size: 24, // 12pt
-            underline: {},
-          }),
-        ],
-      }),
-    );
-    for (const role of job.roles || []) {
-      children.push(
-        new Paragraph({
-          spacing: { before: 120, after: 40 },
-          children: [
-            new TextRun({ text: `${L.role}: `, font: FONT, bold: true, size: 22 }),
-            new TextRun({
-              text: `${role.title}${role.period ? ` (${role.period})` : ""}`,
-              font: FONT,
-              size: 22,
-              bold: true,
-            }),
-          ],
-        }),
+  if (cv.experience?.length) {
+    parts.push(sectionHeading(L.experience));
+    for (const exp of cv.experience) {
+      const headerText =
+        exp.period ? `${exp.company} (${exp.period})` : exp.company;
+      parts.push(
+        `<w:p><w:pPr><w:jc w:val="both"/><w:rPr>${RPR_COMPANY}</w:rPr></w:pPr>${run(RPR_COMPANY, headerText)}</w:p>`,
       );
-      children.push(
-        new Paragraph({
-          spacing: { before: 60, after: 40 },
-          children: [
-            new TextRun({ text: `${L.responsibilities}:`, font: FONT, bold: true, size: 22 }),
-          ],
-        }),
-      );
-      for (const r of role.responsibilities || []) {
-        children.push(bullet(r));
+
+      for (const role of exp.roles ?? []) {
+        const titleText =
+          role.period ? `${role.title} (${role.period})` : role.title;
+        parts.push(
+          bodyPara(run(RPR_BODY_BOLD, `${L.role}: `), run(RPR_BODY_BOLD, titleText)),
+        );
+        if (role.responsibilities?.length) {
+          parts.push(bodyPara(run(RPR_BODY_BOLD, `${L.responsibilities}:`)));
+          for (const r of withTrailingPunct(role.responsibilities)) {
+            parts.push(bullet(run(RPR_BODY, r)));
+          }
+        }
       }
+      parts.push(emptyPara());
     }
   }
 
   // Languages
-  children.push(sectionHeading(L.languages));
-  for (const item of data.languages || []) {
-    children.push(bullet(item));
+  if (cv.languages?.length) {
+    parts.push(sectionHeading(L.languages));
+    for (const lang of withTrailingPunct(cv.languages)) {
+      parts.push(bullet(run(RPR_BODY, lang)));
+    }
+    parts.push(emptyPara());
   }
 
-  // Compensation table
-  children.push(sectionHeading(L.compensation));
-  const c = data.compensationPackage;
-  const compTable = new Table({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [5400, 3960],
-    rows: [
-      labelValueRow(L.monthlySalary, c.monthlySalary),
-      labelValueRow(L.annualBonus, c.annualBonus),
-      labelValueRow(L.privatePension, c.privatePension),
-      labelValueRow(L.stockOptions, c.stockOptions),
-      labelValueRow(L.healthInsurance, c.healthInsurance),
-      labelValueRow(L.dentalInsurance, c.dentalInsurance),
-      labelValueRow(L.mealVoucher, c.mealVoucher),
-      labelValueRow(L.foodVoucher, c.foodVoucher),
-      labelValueRow(L.transportVoucher, c.transportVoucher),
-      labelValueRow(L.other, c.other),
-    ],
+  // Compensation package
+  const comp = cv.compensationPackage ?? ({} as CVData["compensationPackage"]);
+  const compEntries: Array<[string, string]> = [
+    [L.monthlySalary, comp.monthlySalary],
+    [L.annualBonus, comp.annualBonus],
+    [L.privatePension, comp.privatePension],
+    [L.stockOptions, comp.stockOptions],
+    [L.healthInsurance, comp.healthInsurance],
+    [L.dentalInsurance, comp.dentalInsurance],
+    [L.mealVoucher, comp.mealVoucher],
+    [L.foodVoucher, comp.foodVoucher],
+    [L.transportVoucher, comp.transportVoucher],
+    [L.other, comp.other],
+  ].filter(([, v]) => v && v.trim()) as Array<[string, string]>;
+
+  if (compEntries.length || cv.salaryExpectation?.trim()) {
+    parts.push(sectionHeading(L.compensation));
+    for (const [label, value] of compEntries) {
+      parts.push(
+        bullet(
+          run(RPR_BODY_BOLD, `${label}: `),
+          run(RPR_BODY, value),
+        ),
+      );
+    }
+    if (cv.salaryExpectation?.trim()) {
+      parts.push(
+        bullet(
+          run(RPR_BODY_BOLD, `${L.salaryExpectation}: `),
+          run(RPR_BODY, cv.salaryExpectation.trim()),
+        ),
+      );
+    }
+    parts.push(emptyPara());
+  }
+
+  // Interview Analysis
+  const a = cv.interviewAnalysis ?? ({} as CVData["interviewAnalysis"]);
+  const analysisBlocks: Array<[string, string]> = [
+    [L.careerHistory, a.careerHistory],
+    [L.currentExperienceAndCases, a.currentExperienceAndCases],
+    [L.peopleLeadership, a.peopleLeadership],
+    [L.communication, a.communicationAndPersonalImpression],
+    [L.motivation, a.motivation],
+    [L.whyRecommending, a.whyWeAreRecommending],
+  ];
+  const anyAnalysis = analysisBlocks.some(([, v]) => v && v.trim());
+  if (anyAnalysis) {
+    parts.push(sectionHeading(L.analysis));
+    for (const [label, text] of analysisBlocks) {
+      if (!text?.trim()) continue;
+      parts.push(
+        bodyPara(
+          run(RPR_BODY_BOLD, `${label}: `),
+          run(RPR_BODY, text.trim()),
+        ),
+      );
+    }
+  }
+
+  return parts.join("");
+}
+
+// ----------------- Template I/O -----------------
+
+let cachedTemplate: ArrayBuffer | null = null;
+async function loadTemplate(): Promise<ArrayBuffer> {
+  if (cachedTemplate) return cachedTemplate;
+  cachedTemplate = Buffer.from(FIND_TEMPLATE_B64, "base64").buffer.slice(0) as ArrayBuffer;
+  return cachedTemplate;
+}
+
+export async function buildCVDocument(
+  cv: CVData,
+  language: CVLanguage,
+): Promise<Uint8Array> {
+  const tplBuf = await loadTemplate();
+  const zip = await JSZip.loadAsync(tplBuf);
+
+  const docFile = zip.file("word/document.xml");
+  if (!docFile) throw new Error("Template missing word/document.xml");
+  const docXml = await docFile.async("string");
+
+  const bodyStart = docXml.indexOf("<w:body>");
+  const bodyEnd = docXml.indexOf("</w:body>");
+  if (bodyStart < 0 || bodyEnd < 0) {
+    throw new Error("Template body markers not found");
+  }
+  const headerXml = docXml.slice(0, bodyStart + "<w:body>".length);
+  const bodyInner = docXml.slice(bodyStart + "<w:body>".length, bodyEnd);
+
+  // Preserve the original sectPr (page size, margins, header/footer refs).
+  const sectMatch = bodyInner.match(/<w:sectPr[\s>][\s\S]*?<\/w:sectPr>/);
+  const sectPr = sectMatch
+    ? sectMatch[0]
+    : `<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="2268" w:right="1134" w:bottom="1134" w:left="1134" w:header="709" w:footer="709" w:gutter="0"/></w:sectPr>`;
+
+  const newBody = buildBody(cv, language);
+  const finalXml = `${headerXml}${newBody}${sectPr}</w:body></w:document>`;
+
+  zip.file("word/document.xml", finalXml);
+
+  const out = await zip.generateAsync({
+    type: "uint8array",
+    compression: "DEFLATE",
+    compressionOptions: { level: 6 },
   });
-
-  // Salary expectation
-  const salaryExpectation = new Paragraph({
-    spacing: { before: 200, after: 100 },
-    children: [
-      new TextRun({ text: `${L.salaryExpectation}: `, font: FONT, bold: true, color: NAVY, size: 24 }),
-      new TextRun({ text: data.salaryExpectation || "—", font: FONT, size: 22 }),
-    ],
-  });
-
-  // Analysis
-  const analysisChildren: Paragraph[] = [];
-  analysisChildren.push(sectionHeading(L.analysis));
-  const a = data.interviewAnalysis;
-  analysisChildren.push(...analysisBlock(L.careerHistory, a.careerHistory));
-  analysisChildren.push(
-    ...analysisBlock(L.currentExperienceAndCases, a.currentExperienceAndCases),
-  );
-  analysisChildren.push(...analysisBlock(L.peopleLeadership, a.peopleLeadership));
-  analysisChildren.push(
-    ...analysisBlock(L.communication, a.communicationAndPersonalImpression),
-  );
-  analysisChildren.push(...analysisBlock(L.motivation, a.motivation));
-  analysisChildren.push(...analysisBlock(L.whyRecommending, a.whyWeAreRecommending));
-
-  // Suppress unused var warning for logo (kept for potential future inline usage).
-  void logo;
-
-  const doc = new Document({
-    creator: "FIND HR Consulting",
-    title: `FIND CV - ${data.name}`,
-    styles: {
-      default: {
-        document: { run: { font: FONT, size: 22 } },
-      },
-    },
-    numbering: {
-      config: [
-        {
-          reference: "find-bullets",
-          levels: [
-            {
-              level: 0,
-              format: LevelFormat.BULLET,
-              text: "•",
-              alignment: AlignmentType.LEFT,
-              style: {
-                paragraph: { indent: { left: 720, hanging: 360 } },
-                run: { font: FONT, color: BLUE },
-              },
-            },
-          ],
-        },
-      ],
-    },
-    sections: [
-      {
-        properties: {
-          page: {
-            size: {
-              width: 12240,
-              height: 15840,
-              orientation: PageOrientation.PORTRAIT,
-            },
-            margin: { top: 720, right: 1080, bottom: 720, left: 1080 },
-          },
-        },
-        headers: { default: header },
-        footers: { default: footer },
-        children: [
-          ...children,
-          compTable,
-          salaryExpectation,
-          ...analysisChildren,
-        ],
-      },
-    ],
-  });
-
-  // Suppress unused import warning for ShadingType (kept for future use).
-  void ShadingType;
-  void HeadingLevel;
-
-  const buf = await Packer.toBuffer(doc);
-  return new Uint8Array(buf);
+  return out;
 }
