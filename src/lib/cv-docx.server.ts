@@ -4,7 +4,7 @@
 // from the template untouched — that's how we get pixel-perfect output.
 
 import JSZip from "jszip";
-import templateUrl from "@/assets/find-template.docx?url";
+import { FIND_TEMPLATE_B64 } from "./find-template.b64";
 import type { CVData, CVLanguage } from "./cv-types";
 import { LABELS } from "./cv-labels";
 
