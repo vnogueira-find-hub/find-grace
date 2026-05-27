@@ -141,17 +141,20 @@ function buildBody(cv: CVData, language: CVLanguage): string {
     for (const exp of cv.experience) {
       const headerText =
         exp.period ? `${exp.company} (${exp.period})` : exp.company;
+      // Company header — LOOSE spacing so the role below has an "enter" gap.
       parts.push(
-        `<w:p><w:pPr>${SPACING_TIGHT}<w:jc w:val="both"/><w:rPr>${RPR_COMPANY}</w:rPr></w:pPr>${run(RPR_COMPANY, headerText)}</w:p>`,
+        `<w:p><w:pPr>${SPACING_LOOSE}<w:jc w:val="both"/><w:rPr>${RPR_COMPANY}</w:rPr></w:pPr>${run(RPR_COMPANY, headerText)}</w:p>`,
       );
 
       for (const role of exp.roles ?? []) {
         const titleText =
           role.period ? `${role.title} (${role.period})` : role.title;
+        // Role title — LOOSE so there's an "enter" before "Principais responsabilidades".
         parts.push(
-          bodyParaTight(run(RPR_BODY_BOLD, `${L.role}: `), run(RPR_BODY_BOLD, titleText)),
+          bodyPara(run(RPR_BODY_BOLD, `${L.role}: `), run(RPR_BODY_BOLD, titleText)),
         );
         if (role.responsibilities?.length) {
+          // Responsibilities label — TIGHT so it sticks to the bullets below.
           parts.push(bodyParaTight(run(RPR_BODY_BOLD, `${L.responsibilities}:`)));
           for (const r of withTrailingPunct(role.responsibilities)) {
             parts.push(bullet(run(RPR_BODY, r)));
