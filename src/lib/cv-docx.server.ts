@@ -179,22 +179,11 @@ function buildBody(cv: CVData, language: CVLanguage): string {
 
   if (compEntries.length || cv.salaryExpectation?.trim()) {
     parts.push(sectionHeading(L.compensation));
-    for (const [label, value] of compEntries) {
-      parts.push(
-        bullet(
-          run(RPR_BODY_BOLD, `${label}: `),
-          run(RPR_BODY, value),
-        ),
-      );
-    }
+    const rows = [...compEntries];
     if (cv.salaryExpectation?.trim()) {
-      parts.push(
-        bullet(
-          run(RPR_BODY_BOLD, `${L.salaryExpectation}: `),
-          run(RPR_BODY, cv.salaryExpectation.trim()),
-        ),
-      );
+      rows.push([L.salaryExpectation, cv.salaryExpectation.trim()]);
     }
+    parts.push(compTable(rows));
     parts.push(emptyPara());
   }
 
