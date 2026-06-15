@@ -133,8 +133,40 @@ function buildHeader(): Header {
     ],
   });
 
+  // Full-page watermark ("ê" mark) — floats behind body text on every page.
+  const watermarkBytes = Buffer.from(RECRUTAE_WATERMARK_B64, "base64");
+  const watermarkPara = new Paragraph({
+    spacing: { after: 0 },
+    children: [
+      new ImageRun({
+        type: "png",
+        data: watermarkBytes,
+        // Full A4 page size in pixels (8.27in × 11.69in @ 96dpi).
+        transformation: { width: 794, height: 1123 },
+        floating: {
+          horizontalPosition: {
+            relative: HorizontalPositionRelativeFrom.PAGE,
+            offset: 0,
+          },
+          verticalPosition: {
+            relative: VerticalPositionRelativeFrom.PAGE,
+            offset: 0,
+          },
+          behindDocument: true,
+          wrap: { type: TextWrappingType.NONE },
+        },
+        altText: {
+          title: "Marca Recrutaê",
+          description: "Marca d'água Recrutaê",
+          name: "recrutae-watermark",
+        },
+      }),
+    ],
+  });
+
   return new Header({
     children: [
+      watermarkPara,
       new Table({
         width: { size: CONTENT_WIDTH, type: WidthType.DXA },
         columnWidths: [4513, 4513],
