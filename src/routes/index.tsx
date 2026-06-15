@@ -38,10 +38,15 @@ const LANGUAGES: { value: CVLanguage; label: string; short: string }[] = [
   { value: "es", label: "Español", short: "ES" },
 ];
 
+const TEMPLATES: { value: CVTemplate; label: string }[] = [
+  { value: "find", label: "CV Padrão FIND" },
+  { value: "recrutae", label: "CV Padrão Recrutaê" },
+];
+
 const stageCopy: Record<Exclude<Stage, "idle">, string> = {
   extracting: "Extraindo texto do CV…",
   calling: "Analisando com IA…",
-  building: "Montando documento FIND…",
+  building: "Montando documento…",
 };
 
 function Index() {
@@ -49,6 +54,7 @@ function Index() {
   const [file, setFile] = useState<File | null>(null);
   const [notes, setNotes] = useState("");
   const [language, setLanguage] = useState<CVLanguage>("pt");
+  const [template, setTemplate] = useState<CVTemplate>("find");
   const [stage, setStage] = useState<Stage>("idle");
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
