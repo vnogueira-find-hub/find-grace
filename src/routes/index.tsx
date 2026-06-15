@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { formatCV } from "@/lib/cv-formatter.functions";
 import { extractText } from "@/lib/extract-text";
-import type { CVLanguage } from "@/lib/cv-types";
+import type { CVLanguage, CVTemplate } from "@/lib/cv-types";
 import findLogo from "@/assets/find-logo.png";
 import findLetterhead from "@/assets/find-letterhead.png";
 
