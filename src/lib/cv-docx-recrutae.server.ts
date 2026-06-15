@@ -20,10 +20,14 @@ import {
   WidthType,
   ShadingType,
   HeightRule,
+  HorizontalPositionRelativeFrom,
+  VerticalPositionRelativeFrom,
+  TextWrappingType,
 } from "docx";
 import type { CVData, CVLanguage } from "./cv-types";
 import { LABELS } from "./cv-labels";
 import { RECRUTAE_LOGO_B64 } from "./recrutae-logo.b64";
+import { RECRUTAE_WATERMARK_B64 } from "./recrutae-watermark.b64";
 
 // US Letter-ish, but template uses A4. A4 dims in DXA: 11906 × 16838.
 // 1 inch margin = 1440 DXA. Content width = 11906 - 2*1440 = 9026.
