@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { formatCV } from "@/lib/cv-formatter.functions";
 import { extractText } from "@/lib/extract-text";
-import type { CVLanguage } from "@/lib/cv-types";
+import type { CVLanguage, CVTemplate } from "@/lib/cv-types";
 import findLogo from "@/assets/find-logo.png";
 import findLetterhead from "@/assets/find-letterhead.png";
 
@@ -38,10 +38,15 @@ const LANGUAGES: { value: CVLanguage; label: string; short: string }[] = [
   { value: "es", label: "Español", short: "ES" },
 ];
 
+const TEMPLATES: { value: CVTemplate; label: string }[] = [
+  { value: "find", label: "CV Padrão FIND" },
+  { value: "recrutae", label: "CV Padrão Recrutaê" },
+];
+
 const stageCopy: Record<Exclude<Stage, "idle">, string> = {
   extracting: "Extraindo texto do CV…",
   calling: "Analisando com IA…",
-  building: "Montando documento FIND…",
+  building: "Montando documento…",
 };
 
 function Index() {
@@ -49,6 +54,7 @@ function Index() {
   const [file, setFile] = useState<File | null>(null);
   const [notes, setNotes] = useState("");
   const [language, setLanguage] = useState<CVLanguage>("pt");
+  const [template, setTemplate] = useState<CVTemplate>("find");
   const [stage, setStage] = useState<Stage>("idle");
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +101,7 @@ function Index() {
 
       setStage("calling");
       const result = await formatCVFn({
-        data: { cvText, notes, language },
+        data: { cvText, notes, language, template },
       });
 
       if (!result.ok) {
@@ -128,7 +134,7 @@ function Index() {
     } finally {
       setStage("idle");
     }
-  }, [file, notes, language, formatCVFn]);
+  }, [file, notes, language, template, formatCVFn]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#fafbfc]">
@@ -245,6 +251,29 @@ function Index() {
             placeholder="Cole aqui suas anotações da entrevista. Se vazio, a IA redige uma análise preliminar com base apenas no CV."
             className="mt-2 w-full resize-y rounded-lg border border-[#cfd6e0] bg-white px-3 py-2.5 text-sm text-[#0B1F3A] placeholder:text-[#9aa3b2] focus:border-[#5A8FBF] focus:outline-none focus:ring-2 focus:ring-[#5A8FBF]/20 disabled:opacity-60"
           />
+
+          {/* Template */}
+          <label className="mt-6 block text-sm font-medium text-[#0B1F3A]">
+            Modelo do CV
+          </label>
+          <div className="mt-2 inline-flex rounded-lg border border-[#cfd6e0] bg-[#f7f9fc] p-1">
+            {TEMPLATES.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setTemplate(opt.value)}
+                disabled={busy}
+                className={[
+                  "rounded-md px-4 py-1.5 text-sm font-medium transition",
+                  template === opt.value
+                    ? "bg-white text-[#0B1F3A] shadow-sm"
+                    : "text-[#6b7280] hover:text-[#0B1F3A]",
+                ].join(" ")}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
 
           {/* Language */}
           <label className="mt-6 block text-sm font-medium text-[#0B1F3A]">

@@ -1,6 +1,7 @@
 // Shared types for CV formatting (client-safe — no server imports).
 
 export type CVLanguage = "pt" | "en" | "es";
+export type CVTemplate = "find" | "recrutae";
 
 export interface CVData {
   name: string;
