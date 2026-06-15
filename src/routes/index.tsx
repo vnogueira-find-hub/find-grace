@@ -101,7 +101,7 @@ function Index() {
 
       setStage("calling");
       const result = await formatCVFn({
-        data: { cvText, notes, language },
+        data: { cvText, notes, language, template },
       });
 
       if (!result.ok) {
