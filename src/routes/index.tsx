@@ -134,7 +134,7 @@ function Index() {
     } finally {
       setStage("idle");
     }
-  }, [file, notes, language, formatCVFn]);
+  }, [file, notes, language, template, formatCVFn]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#fafbfc]">
