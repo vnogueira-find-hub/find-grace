@@ -252,6 +252,29 @@ function Index() {
             className="mt-2 w-full resize-y rounded-lg border border-[#cfd6e0] bg-white px-3 py-2.5 text-sm text-[#0B1F3A] placeholder:text-[#9aa3b2] focus:border-[#5A8FBF] focus:outline-none focus:ring-2 focus:ring-[#5A8FBF]/20 disabled:opacity-60"
           />
 
+          {/* Template */}
+          <label className="mt-6 block text-sm font-medium text-[#0B1F3A]">
+            Modelo do CV
+          </label>
+          <div className="mt-2 inline-flex rounded-lg border border-[#cfd6e0] bg-[#f7f9fc] p-1">
+            {TEMPLATES.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setTemplate(opt.value)}
+                disabled={busy}
+                className={[
+                  "rounded-md px-4 py-1.5 text-sm font-medium transition",
+                  template === opt.value
+                    ? "bg-white text-[#0B1F3A] shadow-sm"
+                    : "text-[#6b7280] hover:text-[#0B1F3A]",
+                ].join(" ")}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           {/* Language */}
           <label className="mt-6 block text-sm font-medium text-[#0B1F3A]">
             Idioma do CV
