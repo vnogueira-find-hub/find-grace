@@ -27,7 +27,11 @@ import {
 import type { CVData, CVLanguage } from "./cv-types";
 import { LABELS } from "./cv-labels";
 import { RECRUTAE_LOGO_B64 } from "./recrutae-logo.b64";
-import { RECRUTAE_WATERMARK_B64 } from "./recrutae-watermark.b64";
+import {
+  RECRUTAE_WATERMARK_B64,
+  RECRUTAE_WATERMARK_WIDTH,
+  RECRUTAE_WATERMARK_HEIGHT,
+} from "./recrutae-watermark.b64";
 
 // US Letter-ish, but template uses A4. A4 dims in DXA: 11906 × 16838.
 // 1 inch margin = 1440 DXA. Content width = 11906 - 2*1440 = 9026.
@@ -133,24 +137,26 @@ function buildHeader(): Header {
     ],
   });
 
-  // Full-page watermark ("ê" mark) — floats behind body text on every page.
+  // "ê" watermark mark — small, behind text, positioned bottom-right of the page.
   const watermarkBytes = Buffer.from(RECRUTAE_WATERMARK_B64, "base64");
+  const wmWidth = 180;
+  const wmHeight = Math.round((wmWidth * RECRUTAE_WATERMARK_HEIGHT) / RECRUTAE_WATERMARK_WIDTH);
+  // 914400 EMU = 1 inch. Position: ~6in from left, ~8.5in from top of page.
   const watermarkPara = new Paragraph({
     spacing: { after: 0 },
     children: [
       new ImageRun({
         type: "png",
         data: watermarkBytes,
-        // Full A4 page size in pixels (8.27in × 11.69in @ 96dpi).
-        transformation: { width: 794, height: 1123 },
+        transformation: { width: wmWidth, height: wmHeight },
         floating: {
           horizontalPosition: {
             relative: HorizontalPositionRelativeFrom.PAGE,
-            offset: 0,
+            offset: 5486400, // 6 inches from left
           },
           verticalPosition: {
             relative: VerticalPositionRelativeFrom.PAGE,
-            offset: 0,
+            offset: 7772400, // 8.5 inches from top
           },
           behindDocument: true,
           wrap: { type: TextWrappingType.NONE },
