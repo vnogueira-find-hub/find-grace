@@ -14,7 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      candidate_evaluations: {
+        Row: {
+          candidate_name: string
+          created_at: string
+          id: string
+          interview_transcript: string | null
+          project_id: string
+          raw_response: Json
+          updated_at: string
+        }
+        Insert: {
+          candidate_name: string
+          created_at?: string
+          id?: string
+          interview_transcript?: string | null
+          project_id: string
+          raw_response: Json
+          updated_at?: string
+        }
+        Update: {
+          candidate_name?: string
+          created_at?: string
+          id?: string
+          interview_transcript?: string | null
+          project_id?: string
+          raw_response?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_evaluations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          behavioral_profile: string | null
+          briefing_transcript: string | null
+          client_name: string
+          company_context: string | null
+          compensation: string | null
+          created_at: string
+          dimensions: Json
+          disqualifying_signals: Json
+          id: string
+          language: string
+          missions: Json
+          next_steps: string | null
+          not_expected: Json
+          position_title: string
+          selection_process: string | null
+          stakeholders: Json
+          updated_at: string
+          vacancy_reason: string | null
+          work_model: string | null
+        }
+        Insert: {
+          behavioral_profile?: string | null
+          briefing_transcript?: string | null
+          client_name: string
+          company_context?: string | null
+          compensation?: string | null
+          created_at?: string
+          dimensions?: Json
+          disqualifying_signals?: Json
+          id?: string
+          language?: string
+          missions?: Json
+          next_steps?: string | null
+          not_expected?: Json
+          position_title: string
+          selection_process?: string | null
+          stakeholders?: Json
+          updated_at?: string
+          vacancy_reason?: string | null
+          work_model?: string | null
+        }
+        Update: {
+          behavioral_profile?: string | null
+          briefing_transcript?: string | null
+          client_name?: string
+          company_context?: string | null
+          compensation?: string | null
+          created_at?: string
+          dimensions?: Json
+          disqualifying_signals?: Json
+          id?: string
+          language?: string
+          missions?: Json
+          next_steps?: string | null
+          not_expected?: Json
+          position_title?: string
+          selection_process?: string | null
+          stakeholders?: Json
+          updated_at?: string
+          vacancy_reason?: string | null
+          work_model?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
