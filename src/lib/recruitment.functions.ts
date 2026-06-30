@@ -52,26 +52,27 @@ export const processBriefingFn = createServerFn({ method: "POST" })
 
       // Persist
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const insertPayload = {
+        client_name: briefing.client_name || data.clientName,
+        position_title: briefing.position_title || data.positionTitleHint || "Posição",
+        language: data.language,
+        company_context: briefing.company_context,
+        vacancy_reason: briefing.vacancy_reason,
+        missions: (briefing.missions ?? []) as unknown,
+        not_expected: (briefing.not_expected ?? []) as unknown,
+        dimensions: (briefing.dimensions ?? []) as unknown,
+        disqualifying_signals: (briefing.disqualifying_signals ?? []) as unknown,
+        behavioral_profile: briefing.behavioral_profile,
+        stakeholders: (briefing.stakeholders ?? []) as unknown,
+        selection_process: briefing.selection_process,
+        compensation: briefing.compensation,
+        work_model: briefing.work_model,
+        next_steps: briefing.next_steps,
+        briefing_transcript: data.transcript,
+      };
       const { data: row, error } = await supabaseAdmin
         .from("projects")
-        .insert({
-          client_name: briefing.client_name || data.clientName,
-          position_title: briefing.position_title || data.positionTitleHint || "Posição",
-          language: data.language,
-          company_context: briefing.company_context,
-          vacancy_reason: briefing.vacancy_reason,
-          missions: briefing.missions ?? [],
-          not_expected: briefing.not_expected ?? [],
-          dimensions: briefing.dimensions ?? [],
-          disqualifying_signals: briefing.disqualifying_signals ?? [],
-          behavioral_profile: briefing.behavioral_profile,
-          stakeholders: briefing.stakeholders ?? [],
-          selection_process: briefing.selection_process,
-          compensation: briefing.compensation,
-          work_model: briefing.work_model,
-          next_steps: briefing.next_steps,
-          briefing_transcript: data.transcript,
-        })
+        .insert(insertPayload as never)
         .select("*")
         .single();
       if (error) throw new Error(error.message);
