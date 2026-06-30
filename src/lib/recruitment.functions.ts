@@ -229,7 +229,7 @@ export const generateShortlistFn = createServerFn({ method: "POST" })
           .select("raw_response")
           .eq("project_id", data.projectId);
         if (error) throw new Error(error.message);
-        evaluationsPayload = (rows ?? []).map((r) => r.raw_response as CandidateEvaluationOutput);
+        evaluationsPayload = (rows ?? []).map((r) => r.raw_response as unknown as CandidateEvaluationOutput);
         if (evaluationsPayload.length < 2) {
           throw new Error("São necessárias pelo menos 2 avaliações salvas para gerar a shortlist.");
         }
