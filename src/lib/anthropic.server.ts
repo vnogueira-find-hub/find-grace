@@ -1,7 +1,7 @@
 // Server-only helper that calls Claude via the Anthropic SDK and returns parsed JSON.
 import Anthropic from "@anthropic-ai/sdk";
 
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "claude-sonnet-4-5-20250929";
 
 function getClient() {
   const apiKey = process.env.ANTHROPIC_API_KEY;
