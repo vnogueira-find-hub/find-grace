@@ -41,13 +41,14 @@ Regras:
 export function briefingUserMessage(
   clientName: string,
   positionHint: string | undefined,
-  transcript: string,
+  sources: string,
 ): string {
   return `CLIENT_NAME: ${clientName}
 POSITION_TITLE_HINT: ${positionHint || "(não informado)"}
 
-TRANSCRIÇÃO DA REUNIÃO DE BRIEFING:
-${transcript}`;
+FONTES (transcrição da reunião e/ou documento anexo de "Cronograma e Validação"). Trate o documento anexo como fonte primária de fatos estruturais (missões, dimensões, cronograma, stakeholders) e a transcrição como complemento com nuances da conversa. Se as duas fontes divergirem, prefira o documento.
+
+${sources}`;
 }
 
 export function candidateEvaluatorSystemPrompt(args: {
