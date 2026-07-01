@@ -31,10 +31,10 @@ export async function extractDocumentText(
 }
 
 async function extractPdf(bytes: Uint8Array): Promise<string> {
-  const mod = await import("pdf-parse");
-  const pdfParse = (mod.default ?? mod) as (
-    data: Buffer | Uint8Array,
-  ) => Promise<{ text: string }>;
+  const mod = (await import("pdf-parse")) as unknown as
+    | ((data: Buffer | Uint8Array) => Promise<{ text: string }>)
+    | { default: (data: Buffer | Uint8Array) => Promise<{ text: string }> };
+  const pdfParse = typeof mod === "function" ? mod : mod.default;
   const res = await pdfParse(Buffer.from(bytes));
   return (res.text || "").trim();
 }
