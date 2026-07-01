@@ -104,7 +104,12 @@ export const processBriefingFn = createServerFn({ method: "POST" })
         compensation: briefing.compensation,
         work_model: briefing.work_model,
         next_steps: briefing.next_steps,
-        briefing_transcript: data.transcript,
+        briefing_transcript: [
+          data.transcript?.trim() ? data.transcript.trim() : "",
+          data.attachmentText?.trim()
+            ? `\n\n--- DOCUMENTO ANEXO (${data.attachmentName || "documento"}) ---\n${data.attachmentText.trim()}`
+            : "",
+        ].join(""),
       };
       const { data: row, error } = await supabaseAdmin
         .from("projects")
