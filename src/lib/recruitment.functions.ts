@@ -31,7 +31,31 @@ export const transcribeAudioFn = createServerFn({ method: "POST" })
     }
   });
 
-// ---------- Process briefing ----------
+// ---------- Extract document ----------
+const ExtractDocSchema = z.object({
+  fileBase64: z.string().min(1),
+  filename: z.string().default("document"),
+  mimeType: z.string().default(""),
+});
+
+export const extractDocumentFn = createServerFn({ method: "POST" })
+  .inputValidator((i: unknown) => ExtractDocSchema.parse(i))
+  .handler(async ({ data }) => {
+    try {
+      const { extractDocumentText } = await import("./extract-document.server");
+      const bytes = new Uint8Array(Buffer.from(data.fileBase64, "base64"));
+      if (bytes.byteLength > 15 * 1024 * 1024) {
+        throw new Error("Arquivo grande demais (máx 15 MB).");
+      }
+      const text = await extractDocumentText(bytes, data.filename, data.mimeType);
+      if (!text || text.length < 20) {
+        throw new Error("Não foi possível extrair texto útil do documento.");
+      }
+      return { ok: true as const, text };
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : "Erro ao extrair" };
+    }
+  });
 const BriefingSchema = z.object({
   clientName: z.string().min(1),
   positionTitleHint: z.string().optional(),
