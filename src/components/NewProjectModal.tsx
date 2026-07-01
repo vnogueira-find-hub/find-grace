@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { processBriefingFn } from "@/lib/recruitment.functions";
 import { TranscriptInput } from "./TranscriptInput";
+import { DocumentAttach } from "./DocumentAttach";
 import type { ProjectRow, RecruitmentLanguage } from "@/lib/recruitment-types";
 
 interface Props {
