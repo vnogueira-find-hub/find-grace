@@ -20,6 +20,8 @@ export function NewProjectModal({ open, onClose, onCreated }: Props) {
   const [clientName, setClientName] = useState("");
   const [positionHint, setPositionHint] = useState("");
   const [transcript, setTranscript] = useState("");
+  const [attachmentName, setAttachmentName] = useState<string | null>(null);
+  const [attachmentText, setAttachmentText] = useState("");
   const [language, setLanguage] = useState<RecruitmentLanguage>("Português");
   const [busy, setBusy] = useState(false);
 
@@ -27,8 +29,8 @@ export function NewProjectModal({ open, onClose, onCreated }: Props) {
 
   const submit = async () => {
     if (!clientName.trim()) return toast.error("Informe o nome do cliente.");
-    if (transcript.trim().length < 50)
-      return toast.error("Transcrição muito curta. Cole o texto ou envie o áudio do briefing.");
+    if (transcript.trim().length < 50 && attachmentText.trim().length < 50)
+      return toast.error("Cole a transcrição ou anexe um documento com o briefing.");
     setBusy(true);
     try {
       const res = await process({
@@ -36,6 +38,8 @@ export function NewProjectModal({ open, onClose, onCreated }: Props) {
           clientName: clientName.trim(),
           positionTitleHint: positionHint.trim() || undefined,
           transcript: transcript.trim(),
+          attachmentText: attachmentText.trim() || undefined,
+          attachmentName: attachmentName || undefined,
           language,
         },
       });
@@ -45,6 +49,8 @@ export function NewProjectModal({ open, onClose, onCreated }: Props) {
       setClientName("");
       setPositionHint("");
       setTranscript("");
+      setAttachmentName(null);
+      setAttachmentText("");
       onClose();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao criar projeto");
