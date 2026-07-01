@@ -59,7 +59,9 @@ export const extractDocumentFn = createServerFn({ method: "POST" })
 const BriefingSchema = z.object({
   clientName: z.string().min(1),
   positionTitleHint: z.string().optional(),
-  transcript: z.string().min(20),
+  transcript: z.string().default(""),
+  attachmentText: z.string().optional(),
+  attachmentName: z.string().optional(),
   language: LanguageSchema,
 });
 
@@ -67,11 +69,21 @@ export const processBriefingFn = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => BriefingSchema.parse(i))
   .handler(async ({ data }) => {
     try {
+      const combined = [
+        data.transcript?.trim() ? `TRANSCRIÇÃO DA REUNIÃO DE BRIEFING:\n${data.transcript.trim()}` : "",
+        data.attachmentText?.trim()
+          ? `DOCUMENTO ANEXO — ${data.attachmentName || "Cronograma e Validação"}:\n${data.attachmentText.trim()}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n---\n\n");
+      if (combined.length < 40) throw new Error("Forneça a transcrição ou um documento anexo.");
+
       const { claudeJSON } = await import("./anthropic.server");
       const { briefingSystemPrompt, briefingUserMessage } = await import("./recruitment-prompts");
       const briefing = await claudeJSON<BriefingOutput>(
         briefingSystemPrompt(data.language),
-        briefingUserMessage(data.clientName, data.positionTitleHint, data.transcript),
+        briefingUserMessage(data.clientName, data.positionTitleHint, combined),
       );
 
       // Persist
