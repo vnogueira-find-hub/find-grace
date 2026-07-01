@@ -129,6 +129,26 @@ export function NewProjectModal({ open, onClose, onCreated }: Props) {
               />
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#0B1F3A]">
+              Cronograma e Validação <span className="text-[#6b7280] font-normal">(opcional — PDF, DOCX ou PPTX)</span>
+            </label>
+            <p className="mt-1 text-xs text-[#6b7280]">
+              Anexe o documento da área com missões, dimensões, cronograma e stakeholders. A IA lerá o conteúdo junto com a transcrição.
+            </p>
+            <div className="mt-2">
+              <DocumentAttach
+                fileName={attachmentName}
+                extractedText={attachmentText}
+                onChange={(n, t) => {
+                  setAttachmentName(n);
+                  setAttachmentText(t);
+                }}
+                disabled={busy}
+              />
+            </div>
+          </div>
         </div>
         <div className="flex justify-end gap-2 border-t border-[#e5e9ef] px-6 py-4">
           <button
