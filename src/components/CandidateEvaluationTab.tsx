@@ -50,6 +50,8 @@ export function CandidateEvaluationTab() {
   const getProject = useServerFn(getProjectFn);
   const evaluate = useServerFn(evaluateCandidateFn);
   const saveEval = useServerFn(saveEvaluationFn);
+  const listEvals = useServerFn(listEvaluationsFn);
+  const deleteEval = useServerFn(deleteEvaluationFn);
 
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
