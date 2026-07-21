@@ -34,7 +34,7 @@ async function extractPdf(bytes: Uint8Array): Promise<string> {
   const { extractText, getDocumentProxy } = await import("unpdf");
   const pdf = await getDocumentProxy(bytes);
   const { text } = await extractText(pdf, { mergePages: true });
-  return (typeof text === "string" ? text : text.join("\n")).trim();
+  return (typeof text === "string" ? text : (text as string[]).join("\n")).trim();
 }
 
 async function extractDocx(bytes: Uint8Array): Promise<string> {
