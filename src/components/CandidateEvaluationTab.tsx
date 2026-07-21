@@ -146,10 +146,33 @@ export function CandidateEvaluationTab() {
       if (!res.ok) throw new Error(res.error);
       setSavedOk(true);
       toast.success("Avaliação salva no projeto.");
+      refreshEvals(project.id);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao salvar");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const viewSaved = (row: EvaluationRow) => {
+    setResult(row.raw_response);
+    setCandidateName(row.candidate_name);
+    setSavedOk(true);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const removeSaved = async (row: EvaluationRow) => {
+    if (!project) return;
+    if (!window.confirm(`Excluir avaliação de "${row.candidate_name}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      const res = await deleteEval({ data: { id: row.id } });
+      if (!res.ok) throw new Error(res.error);
+      toast.success("Avaliação excluída.");
+      refreshEvals(project.id);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao excluir");
     }
   };
 
