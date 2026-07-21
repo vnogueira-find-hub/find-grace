@@ -1,30 +1,21 @@
-## Problema
+## Contexto
 
-Ao anexar um PDF na aba "Candidate Evaluation" (ou em qualquer fluxo que use `DocumentAttach` → `extractDocumentFn`), o servidor lança **`DOMMatrix is not defined`**.
+Hoje, quando você salva uma avaliação, ela vai pro banco (`candidate_evaluations`) mas **não aparece em lugar nenhum na interface**. Só dá pra "reencontrar" indo pra aba **Consolidação de Shortlist**, que lê as avaliações salvas mas mostra só de forma agregada. A função `listEvaluationsFn` já existe no backend — só falta expor.
 
-Causa: `src/lib/extract-document.server.ts` usa `pdf-parse`, que por baixo carrega o `pdfjs-dist` legacy. O `pdfjs-dist` depende de APIs de DOM (`DOMMatrix`, `Path2D`, etc.) que **não existem no runtime Cloudflare Worker** onde as server functions rodam. Em dev pode passar por acaso; em preview/produção quebra.
+## O que fazer
 
-Curiosamente o CV Formatter não sofre disso porque a extração de PDF dele acontece **no browser** (via `src/lib/extract-text.ts`), onde DOMMatrix existe nativamente.
+Adicionar, na aba **Avaliação de Candidato**, uma seção **"Avaliações salvas neste projeto"** que aparece assim que um projeto é selecionado.
 
-## Correção
+### Comportamento
 
-Trocar `pdf-parse` por **`unpdf`** — biblioteca pure-JS mantida para ambientes serverless/edge (Cloudflare Workers, Deno, etc.), sem dependências de DOM. É o substituto padrão recomendado para `pdf-parse` em Workers.
+- Lista carrega automaticamente ao escolher o projeto e recarrega após cada "Salvar no projeto".
+- Cada linha mostra: nome do candidato, data, nota geral (badge colorido) e recomendação (prioridade / ressalvas / não avançar).
+- Clicar numa linha **abre a avaliação completa** no mesmo painel de resultado que já existe hoje (reutiliza o bloco `result`), sem precisar rodar de novo.
+- Botão "Excluir" por linha (com confirmação) usando `deleteEvaluationFn` que já existe.
+- Estado vazio: "Nenhuma avaliação salva ainda neste projeto."
 
-### Mudanças
+### Arquivos afetados
 
-1. `bun add unpdf` (remover `pdf-parse` e `@types/pdf-parse` se estiverem no package.json).
-2. `src/lib/extract-document.server.ts` — reescrever `extractPdf`:
-   ```ts
-   async function extractPdf(bytes: Uint8Array): Promise<string> {
-     const { extractText, getDocumentProxy } = await import("unpdf");
-     const pdf = await getDocumentProxy(bytes);
-     const { text } = await extractText(pdf, { mergePages: true });
-     return (text || "").trim();
-   }
-   ```
-3. Nenhuma mudança de UI, prompt, esquema de dados ou fluxo. Docx/pptx/txt continuam iguais.
+- `src/components/CandidateEvaluationTab.tsx` — nova seção de lista + handler de clique que popula `result` e `candidateName` a partir do `raw_response` da linha; refetch de `listEvaluationsFn` após salvar/excluir.
 
-### Verificação
-
-- Anexar PDF real no modal de novo projeto e no fluxo de avaliação de candidato — confirmar que o texto extraído chega ao Claude sem erro.
-- Testar também DOCX/PPTX pra garantir que não regrediram.
+Nenhuma mudança de backend nem de schema — as funções `listEvaluationsFn` e `deleteEvaluationFn` já estão prontas em `src/lib/recruitment.functions.ts`.
