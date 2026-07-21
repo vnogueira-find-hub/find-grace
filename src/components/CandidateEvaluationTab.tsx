@@ -64,11 +64,30 @@ export function CandidateEvaluationTab() {
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<CandidateEvaluationOutput | null>(null);
   const [savedOk, setSavedOk] = useState(false);
+  const [savedEvals, setSavedEvals] = useState<EvaluationRow[]>([]);
+  const [loadingEvals, setLoadingEvals] = useState(false);
 
   const refreshProjects = useCallback(async () => {
     const res = await listProjects({});
     if (res.ok) setProjects(res.projects);
   }, [listProjects]);
+
+  const refreshEvals = useCallback(
+    async (projectId: string) => {
+      if (!projectId) {
+        setSavedEvals([]);
+        return;
+      }
+      setLoadingEvals(true);
+      try {
+        const res = await listEvals({ data: { projectId } });
+        if (res.ok) setSavedEvals(res.evaluations);
+      } finally {
+        setLoadingEvals(false);
+      }
+    },
+    [listEvals],
+  );
 
   useEffect(() => {
     refreshProjects();
@@ -77,13 +96,15 @@ export function CandidateEvaluationTab() {
   useEffect(() => {
     if (!selectedProjectId) {
       setProject(null);
+      setSavedEvals([]);
       return;
     }
     (async () => {
       const res = await getProject({ data: { id: selectedProjectId } });
       if (res.ok) setProject(res.project);
     })();
-  }, [selectedProjectId, getProject]);
+    refreshEvals(selectedProjectId);
+  }, [selectedProjectId, getProject, refreshEvals]);
 
   const runEvaluate = async () => {
     if (!project) return toast.error("Selecione um projeto.");
