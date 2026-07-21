@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Plus, Sparkles, Save, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, Plus, Sparkles, Save, AlertTriangle, CheckCircle2, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  deleteEvaluationFn,
   evaluateCandidateFn,
   getProjectFn,
+  listEvaluationsFn,
   listProjectsFn,
   saveEvaluationFn,
 } from "@/lib/recruitment.functions";
 import type {
   CandidateEvaluationOutput,
+  EvaluationRow,
   ProjectRow,
 } from "@/lib/recruitment-types";
 import { TranscriptInput } from "./TranscriptInput";
