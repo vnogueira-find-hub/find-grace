@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Plus, Sparkles, Save, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, Plus, Sparkles, Save, AlertTriangle, CheckCircle2, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  deleteEvaluationFn,
   evaluateCandidateFn,
   getProjectFn,
+  listEvaluationsFn,
   listProjectsFn,
   saveEvaluationFn,
 } from "@/lib/recruitment.functions";
 import type {
   CandidateEvaluationOutput,
+  EvaluationRow,
   ProjectRow,
 } from "@/lib/recruitment-types";
 import { TranscriptInput } from "./TranscriptInput";
@@ -47,6 +50,8 @@ export function CandidateEvaluationTab() {
   const getProject = useServerFn(getProjectFn);
   const evaluate = useServerFn(evaluateCandidateFn);
   const saveEval = useServerFn(saveEvaluationFn);
+  const listEvals = useServerFn(listEvaluationsFn);
+  const deleteEval = useServerFn(deleteEvaluationFn);
 
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
@@ -59,11 +64,30 @@ export function CandidateEvaluationTab() {
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<CandidateEvaluationOutput | null>(null);
   const [savedOk, setSavedOk] = useState(false);
+  const [savedEvals, setSavedEvals] = useState<EvaluationRow[]>([]);
+  const [loadingEvals, setLoadingEvals] = useState(false);
 
   const refreshProjects = useCallback(async () => {
     const res = await listProjects({});
     if (res.ok) setProjects(res.projects);
   }, [listProjects]);
+
+  const refreshEvals = useCallback(
+    async (projectId: string) => {
+      if (!projectId) {
+        setSavedEvals([]);
+        return;
+      }
+      setLoadingEvals(true);
+      try {
+        const res = await listEvals({ data: { projectId } });
+        if (res.ok) setSavedEvals(res.evaluations);
+      } finally {
+        setLoadingEvals(false);
+      }
+    },
+    [listEvals],
+  );
 
   useEffect(() => {
     refreshProjects();
@@ -72,13 +96,15 @@ export function CandidateEvaluationTab() {
   useEffect(() => {
     if (!selectedProjectId) {
       setProject(null);
+      setSavedEvals([]);
       return;
     }
     (async () => {
       const res = await getProject({ data: { id: selectedProjectId } });
       if (res.ok) setProject(res.project);
     })();
-  }, [selectedProjectId, getProject]);
+    refreshEvals(selectedProjectId);
+  }, [selectedProjectId, getProject, refreshEvals]);
 
   const runEvaluate = async () => {
     if (!project) return toast.error("Selecione um projeto.");
@@ -120,10 +146,33 @@ export function CandidateEvaluationTab() {
       if (!res.ok) throw new Error(res.error);
       setSavedOk(true);
       toast.success("Avaliação salva no projeto.");
+      refreshEvals(project.id);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao salvar");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const viewSaved = (row: EvaluationRow) => {
+    setResult(row.raw_response);
+    setCandidateName(row.candidate_name);
+    setSavedOk(true);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const removeSaved = async (row: EvaluationRow) => {
+    if (!project) return;
+    if (!window.confirm(`Excluir avaliação de "${row.candidate_name}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      const res = await deleteEval({ data: { id: row.id } });
+      if (!res.ok) throw new Error(res.error);
+      toast.success("Avaliação excluída.");
+      refreshEvals(project.id);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao excluir");
     }
   };
 
@@ -177,6 +226,70 @@ export function CandidateEvaluationTab() {
           </div>
         )}
       </section>
+
+      {/* Saved evaluations */}
+      {project && (
+        <section className="rounded-2xl border border-[#e5e9ef] bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-base font-semibold text-[#0B1F3A]">
+              Avaliações salvas neste projeto
+              {savedEvals.length > 0 && (
+                <span className="ml-2 text-xs font-normal text-[#6b7280]">({savedEvals.length})</span>
+              )}
+            </h3>
+            {loadingEvals && <Loader2 className="h-4 w-4 animate-spin text-[#6b7280]" />}
+          </div>
+
+          {savedEvals.length === 0 && !loadingEvals ? (
+            <p className="mt-3 text-sm text-[#6b7280]">Nenhuma avaliação salva ainda neste projeto.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-[#e5e9ef]">
+              {savedEvals.map((row) => {
+                const r = row.raw_response;
+                return (
+                  <li
+                    key={row.id}
+                    className="flex flex-wrap items-center justify-between gap-3 py-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-[#0B1F3A] truncate">{row.candidate_name}</div>
+                      <div className="text-xs text-[#6b7280]">
+                        {new Date(row.created_at).toLocaleString("pt-BR")}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${scoreColor(r?.overall_score ?? null)}`}
+                      >
+                        {typeof r?.overall_score === "number" ? r.overall_score.toFixed(2) : "—"}
+                      </span>
+                      {r?.recommendation && (
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${RECOMMENDATION_COLOR[r.recommendation]}`}
+                        >
+                          {RECOMMENDATION_LABEL[r.recommendation]}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => viewSaved(row)}
+                        className="inline-flex items-center gap-1 rounded-md border border-[#cfd6e0] bg-white px-2.5 py-1 text-xs font-medium text-[#0B1F3A] hover:bg-[#f7f9fc]"
+                      >
+                        <Eye className="h-3.5 w-3.5" /> Ver
+                      </button>
+                      <button
+                        onClick={() => removeSaved(row)}
+                        className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-white px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Excluir
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
 
       {/* Candidate form */}
       {project && (
