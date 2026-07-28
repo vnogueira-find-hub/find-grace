@@ -26,9 +26,29 @@ const RECOMMENDATION_LABEL: Record<string, string> = {
   caveats: "Ressalvas",
   not_recommended: "Não recomendado",
 };
+function normName(n: string): string {
+  return (n || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+/** Garante que os três baldes sejam mutuamente exclusivos. */
+function dedupeShortlist(s: ShortlistOutput["shortlist"]): ShortlistOutput["shortlist"] {
+  const notRec = new Set((s.not_recommended ?? []).map((c) => normName(c.candidate_name)));
+  const caveats = (s.caveats ?? []).filter((c) => !notRec.has(normName(c.candidate_name)));
+  const caveatNames = new Set(caveats.map((c) => normName(c.candidate_name)));
+  const priority = (s.priority ?? []).filter(
+    (n) => !notRec.has(normName(n)) && !caveatNames.has(normName(n)),
+  );
+  return { priority, caveats, not_recommended: s.not_recommended ?? [] };
+}
 
 function shortlistAsText(s: ShortlistOutput, project: ProjectRow): string {
+  const shortlist = dedupeShortlist(s.shortlist);
   const lines: string[] = [];
+
   lines.push(`Shortlist — ${project.client_name} · ${project.position_title}`);
   lines.push("");
   lines.push("=== Tabela Comparativa ===");
