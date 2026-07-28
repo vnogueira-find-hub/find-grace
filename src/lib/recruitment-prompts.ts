@@ -165,9 +165,15 @@ Retorne APENAS JSON válido neste schema (sem markdown):
 INSTRUÇÕES:
 - Baseie-se EXCLUSIVAMENTE nas avaliações fornecidas
 - Ordene comparison_table do maior para o menor weighted_score
+- Os três baldes de "shortlist" (priority, caveats, not_recommended) são MUTUAMENTE EXCLUSIVOS: um mesmo candidato NUNCA pode aparecer em mais de um deles
+- Se o candidato tem qualquer ressalva material (relocação, disponibilidade, gap técnico, risco de perda), ele vai para "caveats" e NÃO para "priority"
+- "priority" contém apenas candidatos recomendados sem restrição relevante
+- A união dos três baldes deve conter exatamente todos os candidatos da comparison_table — sem faltas e sem duplicatas
+- O balde de cada candidato deve corresponder ao campo "recommendation" da linha dele na comparison_table
 - Empate < 0.2: use pontos fortes e sinais de desqualificação para desempatar, registre o critério no heat_map
 - Dimensão "S/E" para um candidato: exclua do cálculo dele e redistribua os pesos proporcionalmente
 - Idioma de saída: ${args.language}`;
+
 }
 
 export function shortlistUserMessage(
