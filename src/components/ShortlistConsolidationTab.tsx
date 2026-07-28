@@ -64,11 +64,12 @@ function shortlistAsText(s: ShortlistOutput, project: ProjectRow): string {
   });
   lines.push("");
   lines.push("=== Shortlist Recomendada ===");
-  lines.push(`Prioridade: ${s.shortlist.priority.join(", ") || "—"}`);
+  lines.push(`Prioridade: ${shortlist.priority.join(", ") || "—"}`);
   lines.push("Com ressalvas:");
-  s.shortlist.caveats.forEach((c) => lines.push(`  - ${c.candidate_name}: ${c.caveat}`));
+  shortlist.caveats.forEach((c) => lines.push(`  - ${c.candidate_name}: ${c.caveat}`));
   lines.push("Não recomendados:");
-  s.shortlist.not_recommended.forEach((c) => lines.push(`  - ${c.candidate_name}: ${c.reason}`));
+  shortlist.not_recommended.forEach((c) => lines.push(`  - ${c.candidate_name}: ${c.reason}`));
+
   lines.push("");
   lines.push("=== Gaps de Mercado ===");
   lines.push(`Recorrentes: ${s.market_gaps.recurring_gaps.join(", ") || "—"}`);
