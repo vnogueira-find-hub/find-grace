@@ -313,33 +313,39 @@ export function ShortlistConsolidationTab() {
           </div>
 
           {/* Shortlist blocks */}
+          {(() => {
+            const sl = dedupeShortlist(result.shortlist);
+            return (
           <div className="mt-6 grid gap-3 lg:grid-cols-3">
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm">
               <div className="font-semibold text-emerald-800">Prioridade</div>
               <ul className="mt-1 list-disc pl-5 text-emerald-900 space-y-1">
-                {result.shortlist.priority.map((n, i) => <li key={i}>{n}</li>)}
-                {result.shortlist.priority.length === 0 && <li className="list-none text-emerald-700/70">—</li>}
+                {sl.priority.map((n, i) => <li key={i}>{n}</li>)}
+                {sl.priority.length === 0 && <li className="list-none text-emerald-700/70">—</li>}
               </ul>
             </div>
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
               <div className="font-semibold text-amber-800">Com ressalvas</div>
               <ul className="mt-1 space-y-1 text-amber-900">
-                {result.shortlist.caveats.map((c, i) => (
+                {sl.caveats.map((c, i) => (
                   <li key={i}><span className="font-medium">{c.candidate_name}:</span> {c.caveat}</li>
                 ))}
-                {result.shortlist.caveats.length === 0 && <li className="text-amber-700/70">—</li>}
+                {sl.caveats.length === 0 && <li className="text-amber-700/70">—</li>}
               </ul>
             </div>
             <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm">
               <div className="font-semibold text-rose-800">Não recomendados</div>
               <ul className="mt-1 space-y-1 text-rose-900">
-                {result.shortlist.not_recommended.map((c, i) => (
+                {sl.not_recommended.map((c, i) => (
                   <li key={i}><span className="font-medium">{c.candidate_name}:</span> {c.reason}</li>
                 ))}
-                {result.shortlist.not_recommended.length === 0 && <li className="text-rose-700/70">—</li>}
+                {sl.not_recommended.length === 0 && <li className="text-rose-700/70">—</li>}
               </ul>
             </div>
           </div>
+            );
+          })()}
+
 
           {/* Market gaps */}
           <div className="mt-6 rounded-lg border border-[#e5e9ef] bg-[#f7f9fc] p-4 text-sm">
