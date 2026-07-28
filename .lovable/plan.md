@@ -1,21 +1,34 @@
-## Contexto
+## Objetivo
 
-Hoje, quando você salva uma avaliação, ela vai pro banco (`candidate_evaluations`) mas **não aparece em lugar nenhum na interface**. Só dá pra "reencontrar" indo pra aba **Consolidação de Shortlist**, que lê as avaliações salvas mas mostra só de forma agregada. A função `listEvaluationsFn` já existe no backend — só falta expor.
+Cada candidato deve aparecer em **um único** bloco da consolidação: Prioridade, Com ressalvas ou Não recomendados.
 
-## O que fazer
+Hoje o modelo repete nomes (Marcelo e Cleber aparecem em Prioridade e em Com ressalvas), o que confunde a leitura do cliente.
 
-Adicionar, na aba **Avaliação de Candidato**, uma seção **"Avaliações salvas neste projeto"** que aparece assim que um projeto é selecionado.
+## Semântica final
 
-### Comportamento
+- **Prioridade**: recomendado para avançar, sem restrição relevante.
+- **Com ressalvas**: recomendado para avançar, mas existe um ponto a validar/negociar antes (relocação, disponibilidade, gap técnico).
+- **Não recomendados**: não segue no processo, com motivo.
 
-- Lista carrega automaticamente ao escolher o projeto e recarrega após cada "Salvar no projeto".
-- Cada linha mostra: nome do candidato, data, nota geral (badge colorido) e recomendação (prioridade / ressalvas / não avançar).
-- Clicar numa linha **abre a avaliação completa** no mesmo painel de resultado que já existe hoje (reutiliza o bloco `result`), sem precisar rodar de novo.
-- Botão "Excluir" por linha (com confirmação) usando `deleteEvaluationFn` que já existe.
-- Estado vazio: "Nenhuma avaliação salva ainda neste projeto."
+## Mudanças
 
-### Arquivos afetados
+**1. Prompt de consolidação (`src/lib/recruitment-prompts.ts`)**
 
-- `src/components/CandidateEvaluationTab.tsx` — nova seção de lista + handler de clique que popula `result` e `candidateName` a partir do `raw_response` da linha; refetch de `listEvaluationsFn` após salvar/excluir.
+Adicionar regras explícitas ao `shortlistSystemPrompt`:
+- Os três baldes são mutuamente exclusivos; um nome nunca pode se repetir entre eles.
+- Se o candidato tem qualquer ressalva material, ele vai para `caveats` e **não** para `priority`.
+- A união dos três baldes deve conter exatamente todos os candidatos da `comparison_table`, sem faltas nem duplicatas.
+- Alinhar o balde ao campo `recommendation` de cada linha da tabela comparativa.
 
-Nenhuma mudança de backend nem de schema — as funções `listEvaluationsFn` e `deleteEvaluationFn` já estão prontas em `src/lib/recruitment.functions.ts`.
+**2. Rede de segurança na renderização (`src/components/ShortlistConsolidationTab.tsx`)**
+
+Mesmo com o prompt ajustado, deduplicar antes de exibir:
+- Remover de `priority` qualquer nome presente em `caveats` ou `not_recommended`.
+- Remover de `caveats` qualquer nome presente em `not_recommended`.
+- Comparação por nome normalizado (trim + minúsculas + sem acento).
+
+Isso garante que resultados já salvos no banco também sejam exibidos corretamente, sem reprocessar.
+
+## Detalhes técnicos
+
+A normalização de nomes usa `String.normalize("NFD")` + remoção de diacríticos, mesma abordagem já usada em `safeFilename`. Nenhuma alteração de schema, banco ou tipos é necessária — apenas prompt e camada de apresentação.
